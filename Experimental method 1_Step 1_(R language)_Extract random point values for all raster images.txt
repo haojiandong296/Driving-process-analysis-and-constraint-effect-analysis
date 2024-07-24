@@ -1,0 +1,70 @@
+##install.packages("raster")
+#install.packages("GD")
+#install.packages("dplyr")
+library(raster)
+
+# 从文件夹中获取所有的.tif文件
+tif_file_path <- list.files("E:/qudonglifenxi/LST(si_ji)/LUCC_LST/Winter", pattern = ".tif$", full.names = TRUE, ignore.case = TRUE)
+print(tif_file_path)
+
+
+#统一投影
+#读取第一个.tif文件的坐标参考系统
+ref_raster <- raster(tif_file_path[1])
+ref_crs <- crs(ref_raster)
+
+for (file_path in tif_file_path) {
+  r <- raster(file_path)
+  crs(r) <- ref_crs
+  if (!identical(crs(ref_raster), crs(r))) {
+    print(paste("栅格文件", file_path, "的坐标参考系统与参考栅格不一致"))
+  }
+}
+
+
+# 如果存在.tif文件，则继续处理
+if (length(tif_file_path) > 0) {
+  # 选择第一个栅格文件作为参考栅格
+  ref_raster <- raster(tif_file_path[1])
+  
+  # 创建空的栅格堆栈
+  stacked_rasters <- stack()
+  
+  # 逐个加载栅格文件，并进行裁剪或调整范围
+  for (file in tif_file_path) {
+    r <- raster(file)
+    r <- crop(r, ref_raster)  # 裁剪栅格到参考栅格的范围
+    r <- resample(r, ref_raster, method='bilinear')  # 重新取样到参考栅格的分辨率
+    stacked_rasters <- stack(stacked_rasters, r)
+  }
+  
+  # 打印堆叠后的栅格文件
+  print(stacked_rasters)
+} else {
+  print("没有找到.tif文件")
+}
+
+
+tif_file_all <- stack(stacked_rasters)# 将栅格堆栈转换为栅格对象
+tif_file_all
+plot(stacked_rasters)# 绘制栅格堆栈中的栅格图像
+
+tif_matrix <- getValues(stacked_rasters)# 获取栅格堆栈中的值
+#View(stacked_rasters)
+# 将NA值替换为0值
+tif_matrix[is.na(tif_matrix)] <- 0
+#View(tif_matrix)
+tif_frame <- as.data.frame(tif_matrix)# 将栅格值矩阵转换为数据框
+# 删除所有数值均为0的行
+tif_frame <- tif_frame[rowSums(tif_frame != 0, na.rm = TRUE) > 0, ]
+# 删除第一列数值全为128的行
+tif_frame <- tif_frame[tif_frame[,1] != 128, ]
+# 随机选取20万个观测值
+library(dplyr)
+tif_frame <- tif_frame %>% sample_n(200000)
+
+View(tif_frame)
+
+# 将数据框导出为csv文件
+csv_file_path <- "E:/qudonglifenxi/LST(si_ji)/LUCC_LST/Winter/tif_frame.csv"
+write.csv(tif_frame, file = csv_file_path, row.names = FALSE)

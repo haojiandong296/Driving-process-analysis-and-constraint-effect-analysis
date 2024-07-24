@@ -1,0 +1,54 @@
+# 导入所需包
+library(scatterplot3d)
+library(readr)
+
+# 导入散点数据
+Geo0 <- read.csv(file="E:/qudonglifenxi/LST(si_ji)/yueshu_fenxi/TWO_yueshu/Spring/2_NDRI_DEM.csv", header=TRUE)
+
+# 将后三列数据设置为X、Y、Z
+X <- Geo0[, 2]
+Y <- Geo0[, 3]
+Z <- Geo0[, 1]
+
+# 绘制原始的三维散点图
+scatterplot3d(X, Y, Z, color = "blue", main = "3D Scatter Plot", xlab = "X", ylab = "Y", zlab = "Z")
+
+# 将X和Y列数据分别分为10个等分
+X_cut <- cut(X, breaks = 10, labels = FALSE, include.lowest = TRUE)
+Y_cut <- cut(Y, breaks = 10, labels = FALSE, include.lowest = TRUE)
+
+# 创建颜色索引
+color_index <- 10 * (X_cut - 1) + Y_cut
+
+# 绘制带有不同颜色的散点图，颜色共有100个等分
+scatterplot3d(X, Y, Z, color = color_index, pch = 16, main = "3D Scatter Plot with 100 Color Groups", xlab = "X", ylab = "Y", zlab = "Z")
+
+# 创建空的数据框用于存储每种颜色中Z值最大的点
+max_Z_points <- data.frame(X = numeric(0), Y = numeric(0), Z = numeric(0))
+
+# 循环遍历每种颜色
+for (i in 1:100) {
+  # 提取当前颜色的点的索引
+  index <- which(color_index == i)
+  # 提取该颜色的点的Z值
+  Z_values <- Z[index]
+  # 找到Z值最大的点的索引
+  max_Z_index <- index[which.max(Z_values)]
+  # 将最大Z值的点添加到max_Z_points数据框中
+  max_Z_points <- rbind(max_Z_points, data.frame(X = X[max_Z_index], Y = Y[max_Z_index], Z = Z[max_Z_index]))
+}
+
+# 读取最初导入的 CSV 文件的前三列表头
+original_headers <- colnames(Geo0)
+
+# 修改数据框列名
+colnames(max_Z_points) <- c(original_headers[2], original_headers[3], original_headers[1])
+
+# 设置导出文件路径
+export_path <- "E:/qudonglifenxi/LST(si_ji)/yueshu_fenxi/TWO_yueshu/Spring/2_NDRI_DEM_baoluo_modified444444.csv"
+
+# 将修改后的数据导出为CSV文件
+write_csv(max_Z_points, file = export_path)
+
+# 打印导出成功消息
+cat("文件已成功导出至：", export_path, "\n")

@@ -1,0 +1,57 @@
+##三维提取100个趋势线
+
+# 导入散点数据
+Geo0 <- read.csv(file="E:/qudonglifenxi/LST(si_ji)/yueshu_fenxi/THREE_yueshu/Spring/2_Hill_NDVI_TWI.csv", header=TRUE)
+
+# 按照第一列数值大小对数据框进行排列
+#View(Geo0)
+
+# 使用等间距将数据分为 100 份
+#breaks <- seq(min(Geo0[, 1]), max(Geo0[, 1]), length.out = 101)
+#bin_counts <- cut(Geo0[, 1], breaks, labels = FALSE)
+
+# 使用自然间断点的方法将数据分为 100 份
+breaks <- quantile(Geo0[, 1], probs = seq(0, 1, length.out = 101))
+bin_counts <- cut(Geo0[, 1], breaks, labels = FALSE)
+
+# 计算每一份的平均值
+bin_means <- tapply(Geo0[, 1], bin_counts, mean, na.rm = TRUE)
+
+
+# 打印分段区间和平均值
+for (i in 1:length(bin_means)) {
+  lower_bound <- breaks[i]
+  upper_bound <- breaks[i + 1]
+  message(sprintf("分段区间 %d: %.2f-%.2f，平均值：%.2f", i, lower_bound, upper_bound, bin_means[i]))
+}
+
+# 计算每个分段区间中第2、3、4列数据的平均值
+bin_means_234 <- tapply(Geo0[, 2], bin_counts, mean, na.rm = TRUE)
+bin_means_345 <- tapply(Geo0[, 3], bin_counts, mean, na.rm = TRUE)
+bin_means_456 <- tapply(Geo0[, 4], bin_counts, mean, na.rm = TRUE)
+
+# 打印分段区间和第2、3、4列数据的平均值
+for (i in 1:length(bin_means)) {
+  lower_bound <- breaks[i]
+  upper_bound <- breaks[i + 1]
+  message(sprintf("分段区间 %d: %.2f-%.2f，第2列平均值：%.2f，第3列平均值：%.2f，第4列平均值：%.2f", i, lower_bound, upper_bound, bin_means_234[i], bin_means_345[i], bin_means_456[i]))
+}
+
+# 创建一个数据框保存平均值
+mean_values <- data.frame(bin_means, bin_means_234, bin_means_345, bin_means_456)
+
+# 打印整合后的平均值
+print(mean_values)
+ 
+# 创建一个数据框保存平均值
+mean_values <- data.frame(bin_means, bin_means_234, bin_means_345, bin_means_456)
+
+# 读取最初导入的 CSV 文件的前三列表头
+original_headers <- colnames(Geo0)
+
+# 修改数据框列名
+colnames(mean_values) <- c(original_headers[1], original_headers[2], original_headers[3], original_headers[4])
+
+# 将数据框导出为CSV文件
+write.csv(mean_values, file = "E:/qudonglifenxi/LST(si_ji)/yueshu_fenxi/THREE_yueshu/Spring/2_Hill_NDVI_TWI_100.csv", row.names = FALSE)
+

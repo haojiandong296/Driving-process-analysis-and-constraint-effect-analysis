@@ -1,0 +1,55 @@
+% 清空变量、关闭所有图形窗口和清屏
+close all;
+clc;
+
+% 指定要读取数据的 CSV 文件的路径
+filename = 'E:\qudonglifenxi\LST(si_ji)\yueshu_fenxi\TWO_yueshu\Spring\2_NDRI_DEM_baoluo.csv';
+
+% 读取 CSV 文件的数据
+data = readmatrix(filename);
+
+% 三维路径点的X、Y、Z项
+X = data(:, 1);
+Y = data(:, 2);
+Z = data(:, 3);
+
+% 创建拟合模型
+fitmodel = fit([X, Y], Z, 'poly23');
+
+% 生成拟合结果
+Xfit = linspace(min(X), max(X), 100);
+Yfit = linspace(min(Y), max(Y), 100);
+[Xfit, Yfit] = meshgrid(Xfit, Yfit);
+Zfit = fitmodel(Xfit, Yfit);
+
+% 找到包络面上最高点的坐标
+[maxZ, maxZIdx] = max(Zfit, [], 'all', 'linear');
+[maxX, maxY] = ind2sub(size(Zfit), maxZIdx);
+
+% 读取 CSV 文件的表头
+fid = fopen(filename, 'r');
+headers = fgetl(fid);
+fclose(fid);
+headers = strsplit(headers, ',');
+
+% 绘制散点图和光滑的包络面
+figure;
+scatter3(X, Y, Z, 'filled');
+hold on;
+scatter3(Xfit(maxX, maxY), Yfit(maxX, maxY), maxZ, 100, 'r', 'filled');
+text(Xfit(maxX, maxY), Yfit(maxX, maxY), maxZ + 1, sprintf('(%.2f, %.2f, %.2f)', Xfit(maxX, maxY), Yfit(maxX, maxY), maxZ), 'Color', 'r', 'FontSize', 15, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom');
+surf(Xfit, Yfit, Zfit, 'FaceAlpha', 0.5, 'EdgeColor', 'none');
+xlabel(headers{1}); % 使用第一列的表头作为 X 标签
+ylabel(headers{2}); % 使用第二列的表头作为 Y 标签
+zlabel(headers{3}); % 使用第三列的表头作为 Z 标签
+title('三维散点图和光滑的包络面');
+
+% 设置颜色映射和范围
+colormap(jet); % 使用彩虹色映射
+caxis([min(Z), max(Z)]); % 根据 Z 数据的范围设置颜色映射范围
+
+% 生成图像文件名
+output_filename = sprintf('3_%s_%s.fig', headers{1}, headers{2});
+
+% 绘制的图导出为 .fig 文件
+savefig(gcf, fullfile(fileparts(filename), output_filename));

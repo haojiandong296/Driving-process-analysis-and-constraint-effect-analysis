@@ -1,0 +1,93 @@
+% 清空变量、关闭所有图形窗口和清屏
+close all;
+clear;
+clc;
+
+filename = 'E:\qudonglifenxi\LST(si_ji)\yueshu_fenxi\THREE_yueshu\Spring\2_BSI_Aspect_Hill_100.csv';
+data = readmatrix(filename);
+
+% 提取表头
+fid = fopen(filename);
+header = fgetl(fid);
+fclose(fid);
+headers = strsplit(header, ',');
+headers = strrep(headers, '"', ''); % 去除双引号
+X_label = headers{2};  % 第二列表头作为X标签
+Y_label = headers{3};  % 第三列表头作为Y标签
+Z_label = headers{4};  % 第四列表头作为Z标签
+
+% 三维路径点的X、Y、Z项
+X = data(:, 2)';
+Y = data(:, 3)';
+Z = data(:, 4)';
+% 设置离散参数（维度与X,Y,Z相同）
+D = size(data, 1);  % 获取数据行数
+T = 0:1:(D-1)*1;
+% 对X,Y,Z分别与T之间进行多项式拟合，这里多项式最高项为4次
+C1 = polyfit(T, X, 6);
+C2 = polyfit(T, Y, 6);
+C3 = polyfit(T, Z, 6);
+ZX = polyval(C1, T);
+ZY = polyval(C2, T);
+ZZ = polyval(C3, T);
+
+% 绘制拟合之后的路径和添加散点
+scatter3(X, Y, Z, [], data(:, 1), 'filled');
+colormap(jet);  % 设置颜色映射为蓝色到红色
+colorbar;  % 添加颜色条
+hold on
+
+% 设置路径图线的渐变颜色
+colors = [0 0 1; 0 1 1; 0 1 0; 1 1 0; 1 0 0]; % 设置渐变颜色矩阵
+for i = 1:D-1
+    cur_color = interp1(linspace(0, 1, size(colors, 1)), colors, (i-1)/(D-2));
+    plot3(ZX(i:i+1), ZY(i:i+1), ZZ(i:i+1), 'LineWidth', 3, 'Color', cur_color);
+end
+hold off
+
+% 添加坐标轴标签
+xlabel(X_label, 'FontSize', 18);
+ylabel(Y_label, 'FontSize', 18);
+zlabel(Z_label, 'FontSize', 18);
+
+% 计算拟合的残差平均值
+mean_residual_X = mean(abs(X - ZX));
+mean_residual_Y = mean(abs(Y - ZY));
+mean_residual_Z = mean(abs(Z - ZZ));
+
+disp(['X 平均残差: ' num2str(mean_residual_X)]);
+disp(['Y 平均残差: ' num2str(mean_residual_Y)]);
+disp(['Z 平均残差: ' num2str(mean_residual_Z)]);
+
+% 计算拟合的平均拟合优度
+rsquared_X = 1 - sum((X - ZX).^2) / sum((X - mean(X)).^2);
+rsquared_Y = 1 - sum((Y - ZY).^2) / sum((Y - mean(Y)).^2);
+rsquared_Z = 1 - sum((Z - ZZ).^2) / sum((Z - mean(Z)).^2);
+
+% 计算平均拟合优度
+mean_rsquared = (rsquared_X + rsquared_Y + rsquared_Z) / 3;
+
+mean_rsquared_str = sprintf('%.3f', mean_rsquared);
+
+disp(['X 拟合优度: ' num2str(rsquared_X)]);
+disp(['Y 拟合优度: ' num2str(rsquared_Y)]);
+disp(['Z 拟合优度: ' num2str(rsquared_Z)]);
+disp(['平均拟合优度: ' mean_rsquared_str]);
+
+% 设置拟合度标签位置和样式
+fig = gcf;
+fig.Units = 'normalized';
+fig.Position = [0.1, 0.1, 0.45, 0.7]; % 修改后的代码，确保窗口为正方形
+annotation('textbox',[0.7, 0.8, 0.1, 0.1],'String',['R^2 = ', mean_rsquared_str],'FitBoxToText','on','FontSize',18,'FontWeight','bold','EdgeColor','none','HorizontalAlignment','right','VerticalAlignment','top');
+
+% 增加坐标轴刻度数字的字体大小
+set(gca, 'FontSize', 14); % 修改后的代码，增加坐标轴刻度数字的字体大小
+
+% 构造导出图像的文件名
+export_filename = sprintf('666_%s_%s_%s.fig', strrep(X_label, ' ', '_'), strrep(Y_label, ' ', '_'), strrep(Z_label, ' ', '_'));
+
+% 导出图像到与CSV文件相同的位置
+export_path = fullfile(fileparts(filename), export_filename);
+saveas(gcf, export_path);
+
+disp(['图像已导出到: ' export_path]);
